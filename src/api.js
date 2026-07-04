@@ -89,6 +89,44 @@ export async function fetchSeriesList() {
 }
 
 /**
+ * Fetch the latest recent releases from the WordPress posts API.
+ */
+export async function fetchRecentReleases() {
+  const url = `${WP_BASE}/posts?per_page=20&_fields=id,slug,title,date,categories,link,featured_media`;
+  const res = await fetchWithProxy(url);
+  if (!res.ok) throw new Error('Failed to fetch recent releases');
+  const posts = await res.json();
+
+  return posts.map(post => {
+    const title = decodeHTML(post.title.rendered);
+    const epMatch = title.match(/episode\s+(\d+)/i) || title.match(/ep\s*\.?\s*(\d+)/i);
+    const epNum = epMatch ? parseInt(epMatch[1]) : null;
+
+    // Extract cleaner series title from post title
+    let cleanedTitle = title
+      .replace(/episode\s+\d+/i, '')
+      .replace(/ep\s*\.?\s*\d+/i, '')
+      .replace(/\[\d+\]/g, '')
+      .replace(/english\s*sub/i, '')
+      .replace(/sub/i, '')
+      .replace(/[\s\-,\[\]]+$/, '')
+      .trim();
+
+    return {
+      id: post.id,
+      slug: post.slug,
+      title: cleanedTitle,
+      fullTitle: title,
+      episode: epNum,
+      date: post.date ? post.date.split('T')[0] : null,
+      categoryId: post.categories[0] || null,
+      link: post.link,
+      featuredMediaId: post.featured_media
+    };
+  });
+}
+
+/**
  * Fetch all episodes for a given series by WordPress category ID.
  */
 export async function fetchEpisodes(wpCategoryId) {
