@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchSeriesList, fetchRecentReleases } from '../api'
+import SeriesPoster, { POPULAR_POSTERS } from '../components/SeriesPoster'
 
 export default function Home() {
   const [series, setSeries] = useState([])
@@ -41,7 +42,6 @@ export default function Home() {
     if (found) return found.id
     
     // Guessing fallback slug from post slug
-    // e.g. "battle-through-the-heavens-season-5-episode-206-lucifer-donghua" -> "battle-through-the-heavens-season-5"
     const cleaned = postSlug
       .replace(/-episode-\d+.*$/, '')
       .replace(/-ep-\d+.*$/, '')
@@ -57,13 +57,26 @@ export default function Home() {
     )
   }, [series, searchQuery])
 
-  // Select a spotlight show for the Hero Banner (e.g. Soul Land 2 or Battle Through the Heavens)
+  // Select a spotlight show for the Hero Banner
   const spotlight = useMemo(() => {
     if (series.length === 0) return null
-    // Prefer "soul-land" or "battle-through" or just pick the top one
+    // Prefer "soul-land-2" or "battle-through-the-heavens"
     const popular = series.find(s => s.id.includes('soul-land') || s.id.includes('battle-through'))
     return popular || series[0]
   }, [series])
+
+  // Get Hero banner backdrop URL
+  const heroBackdrop = useMemo(() => {
+    if (!spotlight) return ''
+    const rawUrl = POPULAR_POSTERS[spotlight.id] || 'https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1280&auto=format&fit=crop'
+    
+    const IS_DEPLOYED = !window.location.hostname.includes('localhost')
+      && !window.location.hostname.includes('127.0.0.1');
+
+    return IS_DEPLOYED 
+      ? `/api/proxy?url=${encodeURIComponent(rawUrl)}`
+      : rawUrl;
+  }, [spotlight])
 
   if (loading) {
     return (
@@ -109,11 +122,7 @@ export default function Home() {
                   style={{ animationDelay: `${Math.min(i * 0.03, 0.5)}s` }}
                 >
                   <div className="series-card-poster">
-                    <img
-                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(s.title)}&size=300&background=1e1e2e&color=a78bfa&font-size=0.25&bold=true`}
-                      alt={s.title}
-                      loading="lazy"
-                    />
+                    <SeriesPoster slug={s.id} title={s.title} className="series-poster-img" />
                     <div className="series-card-overlay">
                       <span className="series-card-eps">{s.totalEpisodes} EP</span>
                     </div>
@@ -134,34 +143,40 @@ export default function Home() {
             <div
               className="hero-billboard"
               style={{
-                backgroundImage: `linear-gradient(rgba(8, 8, 13, 0.4), rgba(8, 8, 13, 0.9)), url(https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1280&auto=format&fit=crop)`
+                backgroundImage: `linear-gradient(rgba(8, 8, 13, 0.65), rgba(8, 8, 13, 0.95)), url(${heroBackdrop})`
               }}
             >
               <div className="hero-overlay" />
-              <div className="hero-content">
-                <span className="hero-logo-tag">✦ Trending Now</span>
-                <h1 className="hero-title">{spotlight.title}</h1>
-                <div className="hero-meta">
-                  <span className="meta-tag quality">4K UHD</span>
-                  <span className="meta-tag sub">ENG SUB</span>
-                  <span className="meta-tag ongoing">{spotlight.totalEpisodes} Episodes</span>
+              <div className="hero-content" style={{ display: 'flex', gap: '32px', alignItems: 'center', maxWidth: '1000px' }}>
+                {/* Horizontal Layout containing vertical poster left, metadata right */}
+                <div className="hero-poster-wrapper" style={{ width: '220px', flexShrink: 0, borderRadius: 'var(--radius)', overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.6)', border: '1px solid var(--border-light)' }}>
+                  <SeriesPoster slug={spotlight.id} title={spotlight.title} isHero={true} />
                 </div>
-                <p className="hero-description">
-                  {spotlight.description || 'Step into the ultimate battle of immortals. Experience stunning 4K visual animations, deep tactical encounters, and magical cultivation journeys in this top-rated series.'}
-                </p>
-                <div className="hero-buttons">
-                  <button
-                    className="btn-netflix btn-netflix-primary"
-                    onClick={() => navigate(`/series/${spotlight.id}`)}
-                  >
-                    <span>▶</span> Play Latest
-                  </button>
-                  <button
-                    className="btn-netflix btn-netflix-secondary"
-                    onClick={() => navigate(`/series/${spotlight.id}`)}
-                  >
-                    ⓘ More Info
-                  </button>
+                <div style={{ flex: 1 }}>
+                  <span className="hero-logo-tag">✦ Featured Spotlight</span>
+                  <h1 className="hero-title" style={{ fontSize: '2.5rem', marginBottom: '10px' }}>{spotlight.title}</h1>
+                  <div className="hero-meta" style={{ marginBottom: '14px' }}>
+                    <span className="meta-tag quality">4K UHD</span>
+                    <span className="meta-tag sub">ENG SUB</span>
+                    <span className="meta-tag ongoing">{spotlight.totalEpisodes} Episodes</span>
+                  </div>
+                  <p className="hero-description" style={{ marginBottom: '20px' }}>
+                    {spotlight.description || 'Step into the ultimate battle of cultivation. Witness outstanding 4K visual battles, immortal transformations, and deep strategic cultivation journeys in this top-rated donghua.'}
+                  </p>
+                  <div className="hero-buttons">
+                    <button
+                      className="btn-netflix btn-netflix-primary"
+                      onClick={() => navigate(`/series/${spotlight.id}`)}
+                    >
+                      <span>▶</span> Play Latest
+                    </button>
+                    <button
+                      className="btn-netflix btn-netflix-secondary"
+                      onClick={() => navigate(`/series/${spotlight.id}`)}
+                    >
+                      ⓘ Info
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -183,11 +198,7 @@ export default function Home() {
                         className="netflix-card"
                         onClick={() => navigate(`/watch/${seriesSlug}/${post.episode || post.id}`)}
                       >
-                        <img
-                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(post.title)}&size=300&background=1a1a2e&color=a78bfa&font-size=0.3&bold=true`}
-                          alt={post.title}
-                          loading="lazy"
-                        />
+                        <SeriesPoster slug={seriesSlug} title={post.title} />
                         <div className="netflix-card-overlay">
                           <h3 className="netflix-card-title">{post.title}</h3>
                           <div className="netflix-card-meta">
@@ -217,11 +228,7 @@ export default function Home() {
                       className="netflix-card"
                       onClick={() => navigate(`/series/${s.id}`)}
                     >
-                      <img
-                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(s.title)}&size=300&background=141424&color=a78bfa&font-size=0.25&bold=true`}
-                        alt={s.title}
-                        loading="lazy"
-                      />
+                      <SeriesPoster slug={s.id} title={s.title} />
                       <div className="netflix-card-overlay">
                         <h3 className="netflix-card-title">{s.title}</h3>
                         <div className="netflix-card-meta">
@@ -242,7 +249,7 @@ export default function Home() {
               <h2 className="row-title">All Catalog</h2>
             </div>
             <div className="series-grid">
-              {series.slice(15).map((s, i) => (
+              {series.slice(15).map((s) => (
                 <Link
                   to={`/series/${s.id}`}
                   key={s.id}
@@ -250,11 +257,7 @@ export default function Home() {
                   state={{ series: s }}
                 >
                   <div className="series-card-poster">
-                    <img
-                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(s.title)}&size=300&background=12121a&color=a78bfa&font-size=0.25&bold=true`}
-                      alt={s.title}
-                      loading="lazy"
-                    />
+                    <SeriesPoster slug={s.id} title={s.title} />
                     <div className="series-card-overlay">
                       <span className="series-card-eps">{s.totalEpisodes} EP</span>
                     </div>

@@ -14,6 +14,11 @@ export const config = {
 
 const ALLOWED_ORIGINS = [
   'luciferdonghua.in',
+  'wp.com',
+  'i0.wp.com',
+  'i1.wp.com',
+  'i2.wp.com',
+  'i3.wp.com',
   'geo.dailymotion.com',
   'api.dailymotion.com',
   'rumble.com',

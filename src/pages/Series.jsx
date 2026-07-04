@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { fetchSeriesList, fetchEpisodes } from '../api'
+import SeriesPoster from '../components/SeriesPoster'
 
 export default function Series() {
   const { slug } = useParams()
@@ -70,10 +71,7 @@ export default function Series() {
       {/* Series Hero */}
       <div className="series-hero animate-in delay-1">
         <div className="series-hero-poster">
-          <img
-            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(seriesInfo?.title || slug)}&size=300&background=1e1e2e&color=a78bfa&font-size=0.2&bold=true`}
-            alt={seriesInfo?.title}
-          />
+          <SeriesPoster slug={slug} title={seriesInfo?.title} />
         </div>
         <div className="series-hero-info">
           <h1>{seriesInfo?.title}</h1>
